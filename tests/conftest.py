@@ -45,6 +45,7 @@ def model_property_factory() -> Callable[..., ModelProperty]:
             "additional_properties": None,
             "python_name": "",
             "example": "",
+            "sub_models": [],
             **kwargs,
         }
         return ModelProperty(**kwargs)

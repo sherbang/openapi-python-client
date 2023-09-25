@@ -1,28 +1,26 @@
 [tool.poetry]
 name = "openapi-python-client"
-version = "0.15.2"
+version = "0.16.0"
 description = "Generate modern Python clients from OpenAPI"
 repository = "https://github.com/triaxtec/openapi-python-client"
 license = "MIT"
-keywords=["OpenAPI", "Client", "Generator"]
+keywords = ["OpenAPI", "Client", "Generator"]
 authors = ["Dylan Anthony <danthony@triaxtec.com>"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Code Generators",
-    "Typing :: Typed",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Code Generators",
+  "Typing :: Typed",
 ]
 readme = "README.md"
-packages = [
-    {include = "openapi_python_client"},
-]
+packages = [{ include = "openapi_python_client" }]
 include = ["CHANGELOG.md", "openapi_python_client/py.typed"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 jinja2 = "^3.0.0"
 typer = ">0.6, <0.10"
-colorama = {version = "^0.4.3", markers = "sys_platform == 'win32'"}
+colorama = { version = "^0.4.3", markers = "sys_platform == 'win32'" }
 shellingham = "^1.3.2"
 black = ">=23"
 isort = "^5.0.5"
@@ -105,20 +103,20 @@ max-line-length = 120
 
 [tool.pylint.messages_control]
 disable = [
-    # DRY < MOIST
-    "duplicate-code",
-    # Sometimes necessary to prevent cycles
-    "import-outside-toplevel",
-    # Modules are mostly used for organization here, there is no lib API
-    "missing-module-docstring",
-    # Organization is important, even when just separating classes
-    "too-few-public-methods",
-    # Disable any type-checking, that's what mypy is for
-    "no-member",
-    "no-name-in-module",
-    "import-error",
-    # False positives
-    "cyclic-import",
+  # DRY < MOIST
+  "duplicate-code",
+  # Sometimes necessary to prevent cycles
+  "import-outside-toplevel",
+  # Modules are mostly used for organization here, there is no lib API
+  "missing-module-docstring",
+  # Organization is important, even when just separating classes
+  "too-few-public-methods",
+  # Disable any type-checking, that's what mypy is for
+  "no-member",
+  "no-name-in-module",
+  "import-error",
+  # False positives
+  "cyclic-import",
 ]
 
 [tool.mypy]
@@ -129,10 +127,7 @@ warn_redundant_casts = true
 strict_equality = true
 
 [[tool.mypy.overrides]]
-module = [
-    "importlib_metadata",
-    "typer",
-]
+module = ["importlib_metadata", "typer"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

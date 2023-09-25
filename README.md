@@ -164,6 +164,49 @@ If you are carefully curating your `title` properties already to ensure no dupli
 
 If this option results in conflicts, you will need to manually override class names instead via the `class_overrides` option.
 
+### use_class_with_class
+
+If a model has a property that will generate a new model (IE: object type, or allOf) then make the type of that
+property a model within the parent model.
+
+This is new behavior in version 0.16.0.  Set `use_class_with_class` to False for compatibility with version 0.15.1 and earlier.
+
+OpenAPI example:
+```yaml
+Model:
+   type: object
+   properties:
+   inline_model:
+      type: object
+      foo:
+      type: string
+```
+
+if this setting is True, will result in:
+```python
+# file: models/model.py
+class Model:
+    class InlineModel:
+        foo: str
+
+    inline_model: InlineModel
+```
+
+if this setting is False, will result in:
+
+```python
+# file: models/model_inline_model.py
+class ModelInlineModel:
+    foo: str
+```
+```python
+# file: models/model.py
+class Model:
+    inline_model: ModelInlineModel
+```
+
+The old (False) behavior could easily create name conflicts between sub-models and models.
+
 ### http_timeout
 
 By default, the timeout for retrieving the schema file via HTTP is 5 seconds. In case there is an error when retrieving the schema, you might try and increase this setting to a higher value.

@@ -421,7 +421,7 @@ class TestPropertyFromData:
             name=name,
             required=required,
             values={"A": "A", "B": "B", "C": "C"},
-            class_info=Class(name="ParentAnEnum", module_name="parent_an_enum"),
+            class_info=Class(name="ParentAnEnum", module_name="parent_an_enum", parent="parent"),
             value_type=str,
             default="ParentAnEnum.B",
         )
@@ -452,7 +452,7 @@ class TestPropertyFromData:
             required=required,
             nullable=True,
             values={"A": "A", "B": "B", "C": "C"},
-            class_info=Class(name="ParentAnEnum", module_name="parent_an_enum"),
+            class_info=Class(name="ParentAnEnum", module_name="parent_an_enum", parent="parent"),
             value_type=str,
             default="ParentAnEnum.B",
         )
@@ -500,7 +500,7 @@ class TestPropertyFromData:
             required=required,
             nullable=nullable,
             values={"VALUE_1": 1, "VALUE_2": 2, "VALUE_3": 3},
-            class_info=Class(name="ParentAnEnum", module_name="parent_an_enum"),
+            class_info=Class(name="ParentAnEnum", module_name="parent_an_enum", parent="parent"),
             value_type=int,
             default="ParentAnEnum.VALUE_3",
         )

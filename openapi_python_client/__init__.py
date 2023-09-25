@@ -8,12 +8,13 @@ from enum import Enum
 from importlib.metadata import version
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Union
 
 import httpcore
 import httpx
 import yaml
-from jinja2 import BaseLoader, ChoiceLoader, Environment, FileSystemLoader, PackageLoader
+from attr import define
+from jinja2 import BaseLoader, ChoiceLoader, Environment, FileSystemLoader, PackageLoader, Template
 
 from openapi_python_client import utils
 
@@ -38,6 +39,28 @@ TEMPLATE_FILTERS = {
     "pascalcase": utils.pascal_case,
     "any": any,
 }
+
+
+@define
+class ModelDir:
+    """Represents a Python module on the filesystem"""
+
+    name: str
+    path: Path
+
+    imports: List[str] = []
+    alls: List[str] = []
+
+    def __attrs_post_init__(self) -> None:
+        self.path.mkdir()
+
+    def make_init(self, models_init_template: Template, file_encoding: str) -> None:
+        models_init = self.path / "__init__.py"
+        if models_init.exists():
+            raise Exception(f"__init__.py already exists in {self.path}")
+        models_init.write_text(
+            models_init_template.render(imports=self.imports, alls=self.alls), encoding=file_encoding
+        )
 
 
 class Project:  # pylint: disable=too-many-instance-attributes
@@ -288,7 +311,7 @@ class Project:  # pylint: disable=too-many-instance-attributes
             )
 
             for endpoint in collection.endpoints:
-                module_path = tag_dir / f"{utils.PythonIdentifier(endpoint.name, self.config.field_prefix)}.py"
+                module_path = tag_dir / f"{endpoint.name}.py"
                 module_path.write_text(
                     endpoint_template.render(
                         endpoint=endpoint,

@@ -27,6 +27,8 @@ class ModelProperty(Property):
     relative_imports: Optional[Set[str]]
     lazy_imports: Optional[Set[str]]
     additional_properties: Optional[Union[bool, Property]]
+    sub_models: List[Union[ModelProperty, EnumProperty]]
+
     _json_type_string: ClassVar[str] = "Dict[str, Any]"
 
     template: ClassVar[str] = "model_property.py.jinja"
@@ -69,7 +71,10 @@ class ModelProperty(Property):
             prefix: A prefix to put before any relative (local) module names. This should be the number of . to get
             back to the root of the generated client.
         """
-        return {f"from {prefix}{self.self_import}"}
+        if self.class_info.parent_is_class:
+            return set()
+        else:
+            return {f"from {prefix}{self.self_import}"}
 
     def set_relative_imports(self, relative_imports: Set[str]) -> None:
         """Set the relative imports set for this ModelProperty, filtering out self imports
@@ -180,6 +185,7 @@ class _PropertyData(NamedTuple):
     relative_imports: Set[str]
     lazy_imports: Set[str]
     schemas: Schemas
+    sub_models: List[Union[ModelProperty, EnumProperty]]
 
 
 # pylint: disable=too-many-locals,too-many-branches,too-many-return-statements
@@ -255,11 +261,14 @@ def _process_properties(
 
     required_properties = []
     optional_properties = []
+    sub_models = []
     for prop in properties.values():
         if prop.required and not prop.nullable:
             required_properties.append(prop)
         else:
             optional_properties.append(prop)
+        if config.use_class_within_class and (isinstance(prop, (ModelProperty, EnumProperty))):
+            sub_models.append(prop)
 
         lazy_imports.update(prop.get_lazy_imports(prefix=".."))
         relative_imports.update(prop.get_imports(prefix=".."))
@@ -270,6 +279,7 @@ def _process_properties(
         relative_imports=relative_imports,
         lazy_imports=lazy_imports,
         schemas=schemas,
+        sub_models=sub_models,
     )
 
 
@@ -372,7 +382,7 @@ def build_model_property(
     name: str,
     schemas: Schemas,
     required: bool,
-    parent_name: Optional[str],
+    parent_name: utils.ParentNameType,
     config: Config,
     process_properties: bool,
     roots: Set[Union[ReferencePath, utils.ClassName]],
@@ -394,17 +404,19 @@ def build_model_property(
     if not config.use_path_prefixes_for_title_model_names and data.title:
         class_string = data.title
     else:
-        title = data.title or name
-        if parent_name:
-            class_string = f"{utils.pascal_case(parent_name)}{utils.pascal_case(title)}"
-        else:
-            class_string = title
-    class_info = Class.from_string(string=class_string, config=config)
-    model_roots = {*roots, class_info.name}
+        class_string = data.title or name
+    class_info = Class.from_string(string=class_string, config=config, parent=parent_name)
+
+    if class_info.parent_is_class:
+        model_roots = roots
+    else:
+        model_roots = {*roots, class_info.name}
+
     required_properties: Optional[List[Property]] = None
     optional_properties: Optional[List[Property]] = None
     relative_imports: Optional[Set[str]] = None
     lazy_imports: Optional[Set[str]] = None
+    sub_models = []
     additional_properties: Optional[Union[bool, Property]] = None
     if process_properties:
         data_or_err, schemas = _process_property_data(
@@ -417,10 +429,12 @@ def build_model_property(
         optional_properties = property_data.optional_props
         relative_imports = property_data.relative_imports
         lazy_imports = property_data.lazy_imports
-        for root in roots:
-            if isinstance(root, utils.ClassName):
-                continue
-            schemas.add_dependencies(root, {class_info.name})
+        sub_models = property_data.sub_models
+        if not class_info.parent_is_class:
+            for root in roots:
+                if isinstance(root, utils.ClassName):
+                    continue
+                schemas.add_dependencies(root, {class_info.name})
 
     prop = ModelProperty(
         class_info=class_info,
@@ -431,6 +445,7 @@ def build_model_property(
         relative_imports=relative_imports,
         lazy_imports=lazy_imports,
         additional_properties=additional_properties,
+        sub_models=sub_models,
         description=data.description or "",
         default=None,
         nullable=data.nullable,
@@ -439,9 +454,13 @@ def build_model_property(
         python_name=utils.PythonIdentifier(value=name, prefix=config.field_prefix),
         example=data.example,
     )
-    if class_info.name in schemas.classes_by_name:
-        error = PropertyError(data=data, detail=f'Attempted to generate duplicate models with name "{class_info.name}"')
-        return error, schemas
+    if not prop.class_info.parent_is_class:
+        # Add the new model to the schemas
+        if class_info.name in schemas.classes_by_name:
+            error = PropertyError(
+                data=data, detail=f'Attempted to generate duplicate models with name "{class_info.name}"'
+            )
+            return error, schemas
 
-    schemas = evolve(schemas, classes_by_name={**schemas.classes_by_name, class_info.name: prop})
+        schemas = evolve(schemas, classes_by_name={**schemas.classes_by_name, class_info.name: prop})
     return prop, schemas

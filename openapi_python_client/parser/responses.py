@@ -62,7 +62,7 @@ def response_from_data(
     status_code: HTTPStatus,
     data: Union[oai.Response, oai.Reference],
     schemas: Schemas,
-    parent_name: str,
+    parent_name: utils.ParentNameType,
     config: Config,
 ) -> Tuple[Union[Response, ParseError], Schemas]:
     """Generate a Response from the OpenAPI dictionary representation of it"""

@@ -356,7 +356,7 @@ def build_enum_property(
     required: bool,
     schemas: Schemas,
     enum: Union[List[Optional[str]], List[Optional[int]]],
-    parent_name: Optional[str],
+    parent_name: utils.ParentNameType,
     config: Config,
 ) -> Tuple[Union[EnumProperty, NoneProperty, PropertyError], Schemas]:
     """
@@ -378,10 +378,7 @@ def build_enum_property(
     if len(enum) == 0:
         return PropertyError(detail="No values provided for Enum", data=data), schemas
 
-    class_name = data.title or name
-    if parent_name:
-        class_name = f"{utils.pascal_case(parent_name)}{utils.pascal_case(class_name)}"
-    class_info = Class.from_string(string=class_name, config=config)
+    class_info = Class.from_string(string=data.title or name, config=config, parent=parent_name)
 
     # OpenAPI allows for null as an enum value, but it doesn't make sense with how enums are constructed in Python.
     # So instead, if null is a possible value, make the property nullable.
@@ -406,16 +403,6 @@ def build_enum_property(
         )
     values = EnumProperty.values_from_list(value_list)
 
-    if class_info.name in schemas.classes_by_name:
-        existing = schemas.classes_by_name[class_info.name]
-        if not isinstance(existing, EnumProperty) or values != existing.values:
-            return (
-                PropertyError(
-                    detail=f"Found conflicting enums named {class_info.name} with incompatible values.", data=data
-                ),
-                schemas,
-            )
-
     value_type = type(next(iter(values.values())))
 
     prop = EnumProperty(
@@ -436,7 +423,19 @@ def build_enum_property(
         return default, schemas
     prop = evolve(prop, default=default)
 
-    schemas = evolve(schemas, classes_by_name={**schemas.classes_by_name, class_info.name: prop})
+    if not prop.class_info.parent_is_class:
+        if class_info.name in schemas.classes_by_name:
+            existing = schemas.classes_by_name[class_info.name]
+            if not isinstance(existing, EnumProperty) or values != existing.values:
+                return (
+                    PropertyError(
+                        detail=f"Found conflicting enums named {class_info.name} with incompatible values.", data=data
+                    ),
+                    schemas,
+                )
+
+        schemas = evolve(schemas, classes_by_name={**schemas.classes_by_name, class_info.name: prop})
+
     return prop, schemas
 
 
@@ -466,7 +465,13 @@ def get_enum_default(prop: EnumProperty, data: oai.Schema) -> Union[Optional[str
 
 
 def build_union_property(
-    *, data: oai.Schema, name: str, required: bool, schemas: Schemas, parent_name: str, config: Config
+    *,
+    data: oai.Schema,
+    name: str,
+    required: bool,
+    schemas: Schemas,
+    parent_name: utils.ParentNameType,
+    config: Config,
 ) -> Tuple[Union[UnionProperty, PropertyError], Schemas]:
     """
     Create a `UnionProperty` the right way.
@@ -520,7 +525,7 @@ def build_list_property(
     name: str,
     required: bool,
     schemas: Schemas,
-    parent_name: str,
+    parent_name: utils.ParentNameType,
     config: Config,
     process_properties: bool,
     roots: Set[Union[ReferencePath, utils.ClassName]],
@@ -611,7 +616,7 @@ def _property_from_data(
     required: bool,
     data: Union[oai.Reference, oai.Schema],
     schemas: Schemas,
-    parent_name: str,
+    parent_name: utils.ParentNameType,
     config: Config,
     process_properties: bool,
     roots: Set[Union[ReferencePath, utils.ClassName]],
@@ -727,7 +732,7 @@ def property_from_data(
     required: bool,
     data: Union[oai.Reference, oai.Schema],
     schemas: Schemas,
-    parent_name: str,
+    parent_name: utils.ParentNameType,
     config: Config,
     process_properties: bool = True,
     roots: Optional[Set[Union[ReferencePath, utils.ClassName]]] = None,

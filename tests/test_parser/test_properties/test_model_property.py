@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 import pytest
 
 import openapi_python_client.schema as oai
-from openapi_python_client import Config
+from openapi_python_client import Config, utils
 from openapi_python_client.parser.errors import PropertyError
-from openapi_python_client.parser.properties import StringProperty
+from openapi_python_client.parser.properties import ModelProperty, StringProperty
 
 MODULE_NAME = "openapi_python_client.parser.properties.model_property"
 
@@ -124,6 +124,7 @@ class TestBuildModelProperty:
         name = "prop"
         nullable = False
         required = True
+        config = Config(use_class_within_class=True)
 
         data = oai.Schema.model_construct(
             required=["req"],
@@ -131,12 +132,13 @@ class TestBuildModelProperty:
             properties={
                 "req": oai.Schema.model_construct(type="string"),
                 "opt": oai.Schema(type="string", format="date-time"),
+                "sub": oai.Schema(type="object", properties={"sub_req": oai.Schema(type="string")}),
             },
             description="A class called MyModel",
             nullable=nullable,
         )
         schemas = Schemas(classes_by_reference={"OtherModel": None}, classes_by_name={"OtherModel": None})
-        class_info = Class(name="ParentMyModel", module_name="parent_my_model")
+        class_info = Class(name="ParentMyModel", module_name="parent_my_model", parent="parent")
         roots = {"root"}
 
         model, new_schemas = build_model_property(
@@ -145,11 +147,12 @@ class TestBuildModelProperty:
             schemas=schemas,
             required=required,
             parent_name="parent",
-            config=Config(),
+            config=config,
             roots=roots,
             process_properties=True,
         )
 
+        assert isinstance(model, ModelProperty)
         assert new_schemas != schemas
         assert new_schemas.classes_by_name == {
             "OtherModel": None,
@@ -158,26 +161,43 @@ class TestBuildModelProperty:
         assert new_schemas.classes_by_reference == {
             "OtherModel": None,
         }
+        new_roots = {*roots, class_info.name}
         assert new_schemas.dependencies == {"root": {class_info.name}}
+        sub_model = model_property_factory(
+            name="sub",
+            required=False,
+            roots=new_roots,
+            data=data.properties["sub"],
+            class_info=Class(name="Sub", module_name="sub", parent="ParentMyModel"),
+            required_properties=[],
+            optional_properties=[string_property_factory(name="sub_req", required=False)],
+            description="",
+            relative_imports={"from ..types import UNSET, Unset", "from typing import Union"},
+            lazy_imports=set(),
+            additional_properties=True,
+        )
+        assert model.sub_models[0] == sub_model
         assert model == model_property_factory(
             name=name,
             required=required,
             nullable=nullable,
-            roots={*roots, class_info.name},
+            roots=new_roots,
             data=data,
             class_info=class_info,
             required_properties=[string_property_factory(name="req", required=True)],
-            optional_properties=[date_time_property_factory(name="opt", required=False)],
+            optional_properties=[date_time_property_factory(name="opt", required=False), sub_model],
             description=data.description,
             relative_imports={
                 "from dateutil.parser import isoparse",
                 "from typing import cast",
+                "from typing import Dict",
                 "import datetime",
                 "from ..types import UNSET, Unset",
                 "from typing import Union",
             },
             lazy_imports=set(),
             additional_properties=True,
+            sub_models=[sub_model],
         )
 
     def test_model_name_conflict(self):
@@ -220,7 +240,12 @@ class TestBuildModelProperty:
         ),
     )
     def test_model_naming(
-        self, name: str, title: Optional[str], parent_name: Optional[str], use_title_prefixing: bool, expected: str
+        self,
+        name: str,
+        title: Optional[str],
+        parent_name: utils.ParentNameType,
+        use_title_prefixing: bool,
+        expected: str,
     ):
         from openapi_python_client.parser.properties import Schemas, build_model_property
 
@@ -234,7 +259,7 @@ class TestBuildModelProperty:
             schemas=Schemas(),
             required=True,
             parent_name=parent_name,
-            config=Config(use_path_prefixes_for_title_model_names=use_title_prefixing),
+            config=Config(use_path_prefixes_for_title_model_names=use_title_prefixing, use_class_within_class=False),
             roots={"root"},
             process_properties=True,
         )[0]
@@ -301,7 +326,7 @@ class TestBuildModelProperty:
         )
         schemas = Schemas(classes_by_reference={"OtherModel": None}, classes_by_name={"OtherModel": None})
         roots = {"root"}
-        class_info = Class(name="ParentMyModel", module_name="parent_my_model")
+        class_info = Class(name="ParentMyModel", module_name="parent_my_model", parent="parent")
 
         model, new_schemas = build_model_property(
             data=data,
@@ -747,6 +772,7 @@ class TestProcessModel:
             relative_imports={"relative"},
             lazy_imports={"lazy"},
             schemas=schemas,
+            sub_models=[],
         )
         additional_properties = True
         process_property_data = mocker.patch(f"{MODULE_NAME}._process_property_data")

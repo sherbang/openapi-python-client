@@ -17,7 +17,7 @@ from attrs import define, evolve, field
 from ... import Config
 from ... import schema as oai
 from ...schema.openapi_schema_pydantic import Parameter
-from ...utils import ClassName, PythonIdentifier
+from ...utils import ClassName, ParentNameType, PythonIdentifier, pascal_case
 from ..errors import ParameterError, ParseError, PropertyError
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -49,11 +49,24 @@ class Class:
 
     name: ClassName
     module_name: PythonIdentifier
+    parent: ParentNameType = None
+
+    @property
+    def parent_is_class(self) -> bool:
+        return isinstance(self.parent, ClassName)
+
+    @property
+    def parent_is_endpoint(self) -> bool:
+        return isinstance(self.parent, PythonIdentifier)
 
     @staticmethod
-    def from_string(*, string: str, config: Config) -> "Class":
+    def from_string(*, string: str, config: Config, parent: ParentNameType = None) -> "Class":
         """Get a Class from an arbitrary string"""
         class_name = string.split("/")[-1]  # Get rid of ref path stuff
+
+        if parent and (not isinstance(parent, ClassName) or not config.use_class_within_class):
+            class_name = f"{pascal_case(parent)}{pascal_case(string)}"
+
         class_name = ClassName(class_name, config.field_prefix)
         override = config.class_overrides.get(class_name)
 
@@ -66,7 +79,7 @@ class Class:
             module_name = class_name
         module_name = PythonIdentifier(module_name, config.field_prefix)
 
-        return Class(name=class_name, module_name=module_name)
+        return Class(name=class_name, module_name=module_name, parent=parent)
 
 
 @define
@@ -115,7 +128,7 @@ def update_schemas_with_data(
         name=ref_path,
         schemas=schemas,
         required=True,
-        parent_name="",
+        parent_name=None,
         config=config,
         # Don't process ModelProperty properties because schemas are still being created
         process_properties=False,

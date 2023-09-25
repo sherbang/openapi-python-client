@@ -113,7 +113,7 @@ class Endpoint:
     path: str
     method: str
     description: Optional[str]
-    name: str
+    name: utils.PythonIdentifier
     requires_security: bool
     tag: str
     summary: Optional[str] = ""
@@ -131,7 +131,7 @@ class Endpoint:
 
     @staticmethod
     def parse_request_form_body(
-        *, body: oai.RequestBody, schemas: Schemas, parent_name: str, config: Config
+        *, body: oai.RequestBody, schemas: Schemas, parent_name: utils.ParentNameType, config: Config
     ) -> Tuple[Union[Property, PropertyError, None], Schemas]:
         """Return form_body and updated schemas"""
         body_content = body.content
@@ -152,7 +152,7 @@ class Endpoint:
 
     @staticmethod
     def parse_multipart_body(
-        *, body: oai.RequestBody, schemas: Schemas, parent_name: str, config: Config
+        *, body: oai.RequestBody, schemas: Schemas, parent_name: utils.ParentNameType, config: Config
     ) -> Tuple[Union[Property, PropertyError, None], Schemas]:
         """Return multipart_body"""
         body_content = body.content
@@ -174,7 +174,7 @@ class Endpoint:
 
     @staticmethod
     def parse_request_json_body(
-        *, body: oai.RequestBody, schemas: Schemas, parent_name: str, config: Config
+        *, body: oai.RequestBody, schemas: Schemas, parent_name: utils.ParentNameType, config: Config
     ) -> Tuple[Union[Property, PropertyError, None], Schemas]:
         """Return json_body"""
         json_body = None
@@ -503,7 +503,7 @@ class Endpoint:
             method=method,
             summary=utils.remove_string_escapes(data.summary) if data.summary else "",
             description=utils.remove_string_escapes(data.description) if data.description else "",
-            name=name,
+            name=utils.PythonIdentifier(name, config.field_prefix),
             requires_security=bool(data.security),
             tag=tag,
         )

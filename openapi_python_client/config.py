@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 import yaml
 from pydantic import BaseModel
 
+from openapi_python_client import utils
+
 
 class ClassOverride(BaseModel):
     """An override of a single generated class.
@@ -15,6 +17,10 @@ class ClassOverride(BaseModel):
 
     class_name: Optional[str] = None
     module_name: Optional[str] = None
+
+
+class ConfigError(Exception):
+    pass
 
 
 class Config(BaseModel):
@@ -35,6 +41,8 @@ class Config(BaseModel):
     ]
     field_prefix: str = "field_"
     http_timeout: int = 5
+
+    use_class_within_class: bool = True
 
     @staticmethod
     def load_from_path(path: Path) -> "Config":

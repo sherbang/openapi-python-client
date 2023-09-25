@@ -2,7 +2,7 @@ import builtins
 import re
 from email.message import Message
 from keyword import iskeyword
-from typing import Any, List
+from typing import Annotated, Any, List, Optional, Union
 
 DELIMITERS = r"\. _-"
 
@@ -34,6 +34,12 @@ class ClassName(str):
 
     def __deepcopy__(self, _: Any) -> "ClassName":
         return self
+
+
+ParentNameType = Annotated[
+    Union[ClassName, PythonIdentifier, None],
+    "ClassName if parent is a Model, PythonIdentifier if parent is a Endpoint, else None",
+]
 
 
 def sanitize(value: str) -> str:

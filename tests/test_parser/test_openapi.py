@@ -983,7 +983,7 @@ class TestEndpoint:
         )
         data = oai.Operation.model_construct(
             description=mocker.MagicMock(),
-            operationId=mocker.MagicMock(),
+            operationId="endpoint_operation_id",
             security={"blah": "bloo"},
             responses=mocker.MagicMock(),
         )
@@ -1018,7 +1018,7 @@ class TestEndpoint:
         _add_responses = mocker.patch.object(Endpoint, "_add_responses", return_value=(parse_error, response_schemas))
         data = oai.Operation.model_construct(
             description=mocker.MagicMock(),
-            operationId=mocker.MagicMock(),
+            operationId="endpoint_operation_id",
             security={"blah": "bloo"},
             responses=mocker.MagicMock(),
         )
@@ -1059,7 +1059,7 @@ class TestEndpoint:
         _add_body = mocker.patch.object(Endpoint, "_add_body", return_value=(body_endpoint, body_schemas))
         data = oai.Operation.model_construct(
             description=mocker.MagicMock(),
-            operationId=mocker.MagicMock(),
+            operationId="endpoint_operation_id",
             security={"blah": "bloo"},
             responses=mocker.MagicMock(),
         )
@@ -1162,7 +1162,7 @@ class TestEndpoint:
 
         data = oai.Operation.model_construct(
             description=mocker.MagicMock(),
-            operationId=mocker.MagicMock(),
+            operationId="endpoint_operation_id",
             security=None,
             responses=mocker.MagicMock(),
         )
